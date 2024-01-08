@@ -1,0 +1,8 @@
+0 Yeast
+1 Spiral
+2 Spherical
+3 Rod
+4 Paramecium
+5 Hydra
+6 Euglena
+7 Amoeba

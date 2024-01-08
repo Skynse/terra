@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
+import 'package:terra/core/ml_service.dart';
 import 'package:terra/main.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class CameraScreen extends StatefulWidget {
   @override
@@ -15,35 +17,66 @@ class _CameraScreenState extends State<CameraScreen> {
   CameraController? controller;
   bool cameraReady = false;
 
+  bool isImageGood = false;
+  bool _isProcessing = false;
+  late ImageClassificationHelper imageClassificationHelper;
+  Map<String, double>? classification;
+
   @override
-  void initState() {
-    super.initState(); // initialize the state
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
-    updateCamera();
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    controller?.dispose();
   }
 
-  void updateCamera() {
-    // initialize and update camera
-    controller = CameraController(cameras[0], ResolutionPreset.max);
-    // camera[0] is the camera description for the back camera
-    try {
-      controller?.initialize();
-    } on CameraException catch (e) {
-      print("Unable to initialize camera: $e");
+  @override
+  void initState() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
+    controller = CameraController(cameras[0], ResolutionPreset.high);
+
+    controller?.initialize().then((_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        cameraReady = true;
+      });
+
+      controller?.startImageStream(analyseImage);
+    });
+
+    imageClassificationHelper = ImageClassificationHelper();
+    imageClassificationHelper.initHelper();
+    super.initState();
+  }
+
+  Future<void> analyseImage(CameraImage cameraImage) async {
+    // if image is still analyze, skip this frame
+    if (_isProcessing) {
+      return;
+    }
+    _isProcessing = true;
+    classification =
+        await imageClassificationHelper.inferenceCameraFrame(cameraImage);
+    _isProcessing = false;
+    if (mounted) {
+      setState(() {});
     }
   }
 
   //A future is an object that holds a potential value.
 
   Future<XFile?> takePicture() async {
-    if (controller != null && controller!.value.isInitialized) {
+    if (controller != null || controller!.value.isInitialized) {
       // picture logio
       XFile? data =
           await controller!.takePicture(); // take picture using controller
-      var file =
-          File(data!.path); //get the temporary location of the saved file
-      var documentsDir =
-          await getApplicationDocumentsDirectory(); // get the documents folder of the current device
+
+      var file = File(data.path); //get the temporary location of the saved file
+      var documentsDir = await getExternalStorageDirectories(
+          type: StorageDirectory
+              .pictures); // get the documents folder of the current device
+
       var currentTime = DateTime.now()
           .millisecondsSinceEpoch; // get the current date and time
 
@@ -52,9 +85,16 @@ class _CameraScreenState extends State<CameraScreen> {
           .last; // file.png -> only get png part "png" // get the file format of the captured image
 
       await file.copy(
-          "${documentsDir}/$currentTime.$format"); // Documents/0904203.png //copy the image from the temporary location to the permanent one
+          "${documentsDir?[0].path}/$currentTime.$format"); // Documents/0904203.png //copy the image from the temporary location to the permanent one
       // in our documents folder
+
+      // copy to documents
+      print("Image saved to ${documentsDir?[0].path}/$currentTime.$format");
+      return data;
     }
+
+    print("Camera is not initialized");
+    return null;
   }
 
   @override
@@ -80,7 +120,16 @@ class _CameraScreenState extends State<CameraScreen> {
                     // The button itself
                     borderRadius: BorderRadius.circular(80),
                     onTap: () async {
-                      await takePicture();
+                      // ensure camera is initialized
+                      try {
+                        await Permission.camera.onGrantedCallback(() async {
+                          await takePicture().then((XFile? file) {
+                            if (file != null) {}
+                          });
+                        }).request();
+                      } on CameraException catch (e) {
+                        print("Unable to initialize camera: $e");
+                      }
                     },
                     child: Stack(
                       alignment: Alignment.center,
