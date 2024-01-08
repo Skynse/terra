@@ -59,6 +59,17 @@ class _CameraScreenState extends State<CameraScreen> {
     classification =
         await imageClassificationHelper.inferenceCameraFrame(cameraImage);
     _isProcessing = false;
+    if (classification != null) {
+      if (classification!.keys.contains('positive')) {
+        if (classification!['positive']! > 0.8) {
+          isImageGood = true;
+        } else {
+          isImageGood = false;
+        }
+      } else {
+        isImageGood = false;
+      }
+    }
     if (mounted) {
       setState(() {});
     }
@@ -107,6 +118,11 @@ class _CameraScreenState extends State<CameraScreen> {
           child: Stack(
             children: [
               Container(
+                  decoration: BoxDecoration(
+                      border: Border.all(
+                    width: 5,
+                    color: isImageGood ? Colors.green : Colors.red,
+                  )),
                   child: (this.controller != null &&
                           this
                               .controller!
