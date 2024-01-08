@@ -59,7 +59,9 @@ class _CameraScreenState extends State<CameraScreen> {
     classification =
         await imageClassificationHelper.inferenceCameraFrame(cameraImage);
     _isProcessing = false;
+
     if (classification != null) {
+      print("CLASSIFICATION OUTPUT:" + classification.toString());
       if (classification!.keys.contains('positive')) {
         if (classification!['positive']! > 0.8) {
           isImageGood = true;

@@ -52,7 +52,11 @@ class ImageClassificationHelper {
   // Load labels from assets
   Future<void> _loadLabels() async {
     final labelTxt = await rootBundle.loadString(labelsPath);
-    labels = labelTxt.split('\n');
+    // input data looks like 0 positive. only use the label
+
+    labels = labelTxt.split('\n').map((label) {
+      return label.substring(label.indexOf(' ') + 1);
+    }).toList();
   }
 
   Future<void> initHelper() async {
