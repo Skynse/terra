@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:terra/pages/camera_screen.dart';
 import 'package:camera/camera.dart';
+import 'package:terra/pages/gallery.dart';
 
 List<CameraDescription> cameras =
     []; // USES the availableCameras() to store their descriptions (front, back, external)
@@ -15,8 +16,9 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: CameraScreen(),
-    );
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: CameraScreen(),
+        ));
   }
 }

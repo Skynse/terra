@@ -134,28 +134,101 @@ class _CameraScreenState extends State<CameraScreen> {
                       : Center(child: CircularProgressIndicator())),
               Align(
                   alignment: Alignment.bottomCenter,
-                  child: InkWell(
-                    // The button itself
-                    borderRadius: BorderRadius.circular(80),
-                    onTap: () async {
-                      // ensure camera is initialized
-                      try {
-                        await Permission.camera.onGrantedCallback(() async {
-                          await takePicture().then((XFile? file) {
-                            if (file != null) {}
-                          });
-                        }).request();
-                      } on CameraException catch (e) {
-                        print("Unable to initialize camera: $e");
-                      }
-                    },
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Icon(Icons.circle, size: 80, color: Colors.grey),
-                        Icon(Icons.circle, size: 70, color: Colors.white),
-                      ],
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      InkWell(
+                        // The button itself
+                        borderRadius: BorderRadius.circular(80),
+                        onTap: () async {
+                          // ensure camera is initialized
+                          try {
+                            await Permission.camera.onGrantedCallback(() async {
+                              await controller
+                                  ?.takePicture()
+                                  .then((path) async {
+                                // save path to gallery
+
+                                // get the temporary location of the saved file
+
+                                var file = File(path.path);
+
+                                var documentsDir =
+                                    await getExternalStorageDirectories(
+                                        type: StorageDirectory
+                                            .downloads); // get the documents folder of the current device
+
+                                var currentTime = DateTime.now()
+                                    .millisecondsSinceEpoch; // get the current date and time
+
+                                var format = file.path
+                                    .split('.')
+                                    .last; // file.png -> only get png part "png" // get the file format of the captured image
+
+                                await file.copy(
+                                    "${documentsDir?[0].path}/$currentTime.$format"); // Documents/0904203.png //copy the image from the temporary location to the permanent one
+
+                                // preview
+                                // print out image path
+                                if (!mounted) return;
+
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => Scaffold(
+                                              appBar: AppBar(
+                                                title: Text("Preview"),
+                                              ),
+                                              body: Center(
+                                                child: Image.file(
+                                                  File(
+                                                      "${documentsDir?[0].path}/$currentTime.$format"),
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              ),
+                                            )));
+                              });
+                            }).request();
+                          } on CameraException catch (e) {
+                            print("Unable to initialize camera: $e");
+                          }
+                        },
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Icon(Icons.circle, size: 80, color: Colors.grey),
+                            Icon(Icons.circle, size: 70, color: Colors.white),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.flip_camera_android_outlined),
+                        onPressed: () async {
+                          var currentDescription = controller!.description;
+                          // ensure camera is initialized
+                          try {
+                            await Permission.camera.onGrantedCallback(() async {
+                              if (currentDescription.lensDirection ==
+                                  CameraLensDirection.front) {
+                                await controller
+                                    ?.setDescription(cameras.where((element) {
+                                  return element.lensDirection ==
+                                      CameraLensDirection.back;
+                                }).first);
+                              } else {
+                                await controller
+                                    ?.setDescription(cameras.where((element) {
+                                  return element.lensDirection ==
+                                      CameraLensDirection.front;
+                                }).first);
+                              }
+                            }).request();
+                          } on CameraException catch (e) {
+                            print("Unable to initialize camera: $e");
+                          }
+                        },
+                      ),
+                    ],
                   )),
             ],
           ),
