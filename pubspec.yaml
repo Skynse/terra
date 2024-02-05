@@ -39,6 +39,7 @@ dependencies:
   permission_handler: ^11.0.1
   tflite_flutter: ^0.10.4
   image: ^4.1.4
+  flutter_riverpod: ^2.4.10
 
 dev_dependencies:
   flutter_test:
