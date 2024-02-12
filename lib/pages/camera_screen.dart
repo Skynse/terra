@@ -115,50 +115,43 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-          appBar: AppBar(
-            title: Text("Camera"),
-            actions: [
-              IconButton(
-                  onPressed: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const Gallery()));
-                  },
-                  icon: Icon(Icons.browse_gallery_outlined))
-            ],
-          ),
           backgroundColor: Colors.black,
           body: Padding(
             padding: EdgeInsets.only(
-                bottom: 20), // add padding (space) to bottom of screen
+                top: 20, bottom: 15), // add padding (space) to bottom of screen
             child: Column(
               children: [
                 Expanded(
                   child: Stack(
                     children: [
-                      Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              width: 5,
-                            ),
-                          ),
-                          child: (controller != null &&
-                                  this
-                                      .controller!
-                                      .value
-                                      .isInitialized) // condition to make sure the camera is initialized
-                              ? CameraPreview(this.controller!)
-                              : Center(child: CircularProgressIndicator())),
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(18.0),
+                          child: Container(
+                              child: (controller != null &&
+                                      this
+                                          .controller!
+                                          .value
+                                          .isInitialized) // condition to make sure the camera is initialized
+                                  ? CameraPreview(this.controller!)
+                                  : Center(child: CircularProgressIndicator())),
+                        ),
+                      ),
                       Opacity(
                         opacity: 0.7,
-                        child: Container(
-                          width: double.infinity,
-                          height: MediaQuery.of(context).size.height - 150,
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              width: 5,
-                              color: (isImageGood) ? Colors.green : Colors.red,
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.only(
+                                bottom: 18.0, top: 18, left: 43, right: 43),
+                            child: Container(
+                              height: MediaQuery.of(context).size.height,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  width: 5,
+                                  color:
+                                      (isImageGood) ? Colors.green : Colors.red,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -172,12 +165,21 @@ class _CameraScreenState extends State<CameraScreen> {
                       alignment: Alignment.bottomCenter,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(80),
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
+                            IconButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const Gallery()));
+                                },
+                                icon: Icon(Icons.photo)),
                             InkWell(
                               // The button itself
                               borderRadius: BorderRadius.circular(80),

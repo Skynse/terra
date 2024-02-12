@@ -104,8 +104,16 @@ class _GalleryState extends ConsumerState<Gallery> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text("Gallery"),
+        backgroundColor: Colors.black,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: Colors.white),
+        // ignore: prefer_const_constructors
+        title: Text(
+          "Gallery",
+          style: TextStyle(color: Colors.white),
+        ),
       ),
       body: SafeArea(
         child: FutureBuilder(
@@ -116,7 +124,7 @@ class _GalleryState extends ConsumerState<Gallery> {
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
                   crossAxisSpacing: 4.0,
-                  mainAxisSpacing: 4.0,
+                  mainAxisSpacing: 5.0,
                 ),
                 itemCount: snapshot.data?.length,
                 itemBuilder: (context, index) {
