@@ -104,9 +104,7 @@ class _GalleryState extends ConsumerState<Gallery> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black,
         centerTitle: true,
         iconTheme: IconThemeData(color: Colors.white),
         // ignore: prefer_const_constructors
@@ -133,6 +131,10 @@ class _GalleryState extends ConsumerState<Gallery> {
                     future: File(imagePath).readAsBytes(),
                     builder: (context, snapshot) {
                       if (snapshot.hasData) {
+                        if (snapshot.data!.length == 0) {
+                          return Center(child: Text("No Images Found"));
+                        }
+
                         final rawList = snapshot.data as List<int>;
                         return FutureBuilder(
                           future: isImageValid(rawList),
@@ -168,7 +170,16 @@ class _GalleryState extends ConsumerState<Gallery> {
                 },
               );
             } else {
-              return CircularProgressIndicator();
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    const SizedBox(height: 10),
+                    const Text("Loading Images..."),
+                  ],
+                ),
+              );
             }
           },
         ),

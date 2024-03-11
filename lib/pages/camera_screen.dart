@@ -17,6 +17,7 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> {
   CameraController? controller;
   bool cameraReady = false;
+  double score = 0.0;
 
   bool isImageGood = false;
   bool _isProcessing = false;
@@ -62,6 +63,11 @@ class _CameraScreenState extends State<CameraScreen> {
     _isProcessing = false;
 
     if (classification != null) {
+      double? negative = classification?['negative'];
+      double? positive = classification?['positive'];
+
+      score = positive ?? 0.0 - (negative as num) ?? 0.0;
+
       //print("CLASSIFICATION OUTPUT:" + classification.toString());
       if (classification!.keys.contains('positive')) {
         if (classification!['positive']! > 0.8) {
@@ -115,7 +121,7 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-          backgroundColor: Colors.black,
+          backgroundColor: isImageGood ? Colors.green : Colors.red,
           body: Padding(
             padding: EdgeInsets.only(
                 top: 20, bottom: 15), // add padding (space) to bottom of screen
@@ -137,6 +143,7 @@ class _CameraScreenState extends State<CameraScreen> {
                                   : Center(child: CircularProgressIndicator())),
                         ),
                       ),
+                      /*
                       Opacity(
                         opacity: 0.7,
                         child: Center(
@@ -153,6 +160,22 @@ class _CameraScreenState extends State<CameraScreen> {
                                 ),
                               ),
                             ),
+                          ),
+                        ),
+                      ), */
+                      // score at top right
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: Container(
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            "Score: ${score.toStringAsFixed(2)}",
+                            style: TextStyle(color: Colors.white),
                           ),
                         ),
                       ),
@@ -194,10 +217,6 @@ class _CameraScreenState extends State<CameraScreen> {
                                     }
                                     await controller?.takePicture().then(
                                       (path) async {
-                                        // save path to gallery
-
-                                        // get the temporary location of the saved file
-
                                         var file = File(path.path);
 
                                         var documentsDir =
