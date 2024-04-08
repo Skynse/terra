@@ -9,6 +9,36 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:terra/pages/gallery.dart';
 
+// attribs
+/*
+0 balancing_elements
+1 color_harmony
+2 content
+3 depth_of_field
+4 light
+5 motion_blur
+6 object
+7 repetition
+8 rule_of_thirds
+9 symmetry
+10 vivid_color
+11 score
+*/
+const attributes = {
+  'balancing_elements': 0,
+  'color_harmony': 1,
+  'content': 2,
+  'depth_of_field': 3,
+  'light': 4,
+  'motion_blur': 5,
+  'object': 6,
+  'repetition': 7,
+  'rule_of_thirds': 8,
+  'symmetry': 9,
+  'vivid_color': 10,
+  'score': 11
+};
+
 class CameraScreen extends StatefulWidget {
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -17,8 +47,9 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> {
   CameraController? controller;
   bool cameraReady = false;
-  double score = 0.0;
-
+  // classification
+  Map<String, double> classificationOutput = {}; //attribute: score
+  bool infoVisible = false;
   bool isImageGood = false;
   bool _isProcessing = false;
   late ImageClassificationHelper imageClassificationHelper;
@@ -63,21 +94,9 @@ class _CameraScreenState extends State<CameraScreen> {
     _isProcessing = false;
 
     if (classification != null) {
-      double? negative = classification?['negative'];
-      double? positive = classification?['positive'];
-
-      score = positive ?? 0.0 - (negative as num) ?? 0.0;
-
-      //print("CLASSIFICATION OUTPUT:" + classification.toString());
-      if (classification!.keys.contains('positive')) {
-        if (classification!['positive']! > 0.8) {
-          isImageGood = true;
-        } else {
-          isImageGood = false;
-        }
-      } else {
-        isImageGood = false;
-      }
+      setState(() {
+        classificationOutput = classification!;
+      });
     }
     if (mounted) {
       setState(() {});
@@ -121,7 +140,16 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-          backgroundColor: isImageGood ? Colors.green : Colors.red,
+          // infopanel toggle
+          floatingActionButtonLocation: FloatingActionButtonLocation.startTop,
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              setState(() {
+                infoVisible = !infoVisible;
+              });
+            },
+            child: Icon(infoVisible ? Icons.close : Icons.info),
+          ),
           body: Padding(
             padding: EdgeInsets.only(
                 top: 20, bottom: 15), // add padding (space) to bottom of screen
@@ -164,18 +192,46 @@ class _CameraScreenState extends State<CameraScreen> {
                         ),
                       ), */
                       // score at top right
-                      Positioned(
-                        top: 10,
-                        right: 10,
+                      AnimatedPositioned(
+                        top: infoVisible
+                            ? 10
+                            : -300, // Adjust the top position based on visibility
+                        right: 30,
+                        duration: Duration(
+                            milliseconds: 300), // Set the animation duration
+                        curve: Curves.easeInOut, // Set the animation curve
                         child: Container(
                           padding: EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.black,
+                            color: Colors.red.withOpacity(0.7),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Text(
-                            "Score: ${score.toStringAsFixed(2)}",
-                            style: TextStyle(color: Colors.white),
+                          child: Column(
+                            children: [
+                              for (var attribute in attributes.keys)
+                                Row(
+                                  children: [
+                                    Text(
+                                      attribute,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      classificationOutput[attribute] != null
+                                          ? classificationOutput[attribute]!
+                                              .toStringAsFixed(2)
+                                          : "0.0",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
                           ),
                         ),
                       ),
@@ -188,7 +244,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       alignment: Alignment.bottomCenter,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.black,
+                          color: Colors.black.withOpacity(0.7),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(

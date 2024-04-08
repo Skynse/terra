@@ -1,2 +1,12 @@
-0 positive
-1 negative
+0 balancing_elements
+1 color_harmony
+2 content
+3 depth_of_field
+4 light
+5 motion_blur
+6 object
+7 repetition
+8 rule_of_thirds
+9 symmetry
+10 vivid_color
+11 score
