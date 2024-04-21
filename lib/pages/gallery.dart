@@ -38,11 +38,7 @@ class ImageCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return InkWell(
-      onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context) {
-          return ImagePage(filePath: imagePath);
-        }));
-      },
+      onTap: () {},
       onLongPress: () {
         showDialog(
             context: context,
@@ -98,9 +94,8 @@ class Gallery extends ConsumerStatefulWidget {
 class _GalleryState extends ConsumerState<Gallery> {
   Future<List<String>> getImages() async {
     // get image paths
-    final directory =
-        await getExternalStorageDirectories(type: StorageDirectory.pictures);
-    final dir = Directory(directory![0].path);
+    final directory = await getApplicationDocumentsDirectory();
+    final dir = Directory(directory.path);
     final files = dir.listSync();
     final imageFiles = files.where((element) {
       return element.path.endsWith(".jpg") ||
