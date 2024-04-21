@@ -5,9 +5,27 @@ import 'dart:ui';
 import 'package:camera/camera.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:typed_data';
+
+class ImagePage extends StatelessWidget {
+  ImagePage({super.key, required this.filePath});
+  String filePath;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(),
+      body: Center(
+        child: Image.file(
+          File(filePath),
+        ),
+      ),
+    );
+  }
+}
 
 class ImageCard extends ConsumerWidget {
   final String imagePath;
@@ -20,6 +38,11 @@ class ImageCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return InkWell(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) {
+          return ImagePage(filePath: imagePath);
+        }));
+      },
       onLongPress: () {
         showDialog(
             context: context,
