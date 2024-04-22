@@ -67,8 +67,6 @@ class ImageClassificationHelper {
   }
 
   Future<Map<String, double>> _inference(InferenceModel inferenceModel) async {
-    // wait 1 second to prevent the model from running too fast
-    await Future.delayed(Duration(seconds: 1));
     ReceivePort responsePort = ReceivePort();
     isolateInference.sendPort
         .send(inferenceModel..responsePort = responsePort.sendPort);
