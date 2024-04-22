@@ -38,7 +38,15 @@ class ImageCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return InkWell(
-      onTap: () {},
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) => ImagePage(
+                    filePath: imagePath,
+                  )),
+        );
+      },
       onLongPress: () {
         showDialog(
             context: context,

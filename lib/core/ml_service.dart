@@ -41,9 +41,7 @@ class ImageClassificationHelper {
 
     // Load model from assets
     interpreter = await Interpreter.fromAsset(modelPath, options: options);
-    // Get tensor input shape [1, 224, 224, 3]
     inputTensor = interpreter.getInputTensors().first;
-    // Get tensor output shape [1, 1001]
     outputTensor = interpreter.getOutputTensors().first;
 
     log('Interpreter loaded successfully');
