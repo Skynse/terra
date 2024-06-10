@@ -12,12 +12,6 @@
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>NSMicrophoneUsageDescription</key>
-<string>Need microphone access for uploading audio</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Access camera</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Library</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
