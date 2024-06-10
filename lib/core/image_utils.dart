@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import 'dart:typed_data';
+
 import 'package:camera/camera.dart';
 import 'package:image/image.dart' as image_lib;
 
@@ -38,6 +40,13 @@ class ImageUtils {
         bytes: cameraImage.planes[0].bytes.buffer,
         order: image_lib.ChannelOrder.bgra);
     return img;
+  }
+
+  Uint8List downscaleImage(Uint8List imageData, int maxWidth, int maxHeight) {
+    final image = image_lib.decodeImage(imageData);
+    final resized =
+        image_lib.copyResize(image!, width: maxWidth, height: maxHeight);
+    return Uint8List.fromList(image_lib.encodeJpg(resized));
   }
 
   static image_lib.Image convertYUV420ToImage(CameraImage cameraImage) {
