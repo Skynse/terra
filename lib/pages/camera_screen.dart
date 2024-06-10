@@ -54,6 +54,8 @@ class _CameraScreenState extends State<CameraScreen> {
   bool _isProcessing = false;
   late ImageClassificationHelper imageClassificationHelper;
   Map<String, double>? classification;
+  DateTime? _lastInferenceTime;
+  final Duration _inferenceInterval = Duration(milliseconds: 500);
 
   @override
   void dispose() {
@@ -84,11 +86,14 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> analyseImage(CameraImage cameraImage) async {
-    // if image is still analyzing, skip this frame
-    if (_isProcessing) {
+    final now = DateTime.now();
+    if (_isProcessing ||
+        (_lastInferenceTime != null &&
+            now.difference(_lastInferenceTime!) < _inferenceInterval)) {
       return;
     }
     _isProcessing = true;
+    _lastInferenceTime = now;
     classification =
         await imageClassificationHelper.inferenceCameraFrame(cameraImage);
     _isProcessing = false;
@@ -98,24 +103,21 @@ class _CameraScreenState extends State<CameraScreen> {
         classificationOutput = classification!;
       });
     }
-    if (mounted) {
-      setState(() {});
-    }
   }
 
   //A future is an object that holds a potential value.
 
   Future<XFile?> takePicture() async {
-
     if (controller != null || controller!.value.isInitialized) {
       // picture logio
-    
+      controller!.setFlashMode(FlashMode.off); // turn off flash
+
       XFile? data =
           await controller!.takePicture(); // take picture using controller
 
       var file = File(data.path); //get the temporary location of the saved file
-      var documentsDir = await getApplicationDocumentsDirectory();// get the documents folder of the current device
-     
+      var documentsDir =
+          await getApplicationDocumentsDirectory(); // get the documents folder of the current device
 
       var currentTime = DateTime.now()
           .millisecondsSinceEpoch; // get the current date and time
@@ -267,70 +269,67 @@ class _CameraScreenState extends State<CameraScreen> {
                                 // ensure camera is initialized
 
                                 if (Platform.isAndroid) {
+                                  try {
+                                    await Permission.camera
+                                        .onGrantedCallback(() async {
+                                      if (controller!.value.isTakingPicture) {
+                                        return;
+                                      }
+                                      await controller?.takePicture().then(
+                                        (path) async {
+                                          var file = File(path.path);
 
-                                try {
-                                  await Permission.camera
-                                      .onGrantedCallback(() async {
-                                    if (controller!.value.isTakingPicture) {
-                                      return;
-                                    }
-                                    await controller?.takePicture().then(
-                                      (path) async {
-                                        var file = File(path.path);
+                                          var documentsDir =
+                                              await getApplicationDocumentsDirectory(); // get the documents folder of the current device
 
-                                        var documentsDir =
-                                            await getApplicationDocumentsDirectory(); // get the documents folder of the current device
+                                          var currentTime = DateTime.now()
+                                              .millisecondsSinceEpoch; // get the current date and time
 
-                                        var currentTime = DateTime.now()
-                                            .millisecondsSinceEpoch; // get the current date and time
+                                          var format = file.path
+                                              .split('.')
+                                              .last; // file.png -> only get png part "png" // get the file format of the captured image
 
-                                        var format = file.path
-                                            .split('.')
-                                            .last; // file.png -> only get png part "png" // get the file format of the captured image
+                                          await file.copy(
+                                              "${documentsDir.path}/$currentTime.$format"); // Documents/0904203.png //copy the image from the temporary location to the permanent one
+                                          print(
+                                              "Image saved to ${documentsDir.path}/$currentTime.$format");
+                                          // preview
+                                          // print out image path
+                                          if (!mounted) return;
+                                        },
+                                      );
+                                    }).request();
+                                  } on CameraException catch (e) {
+                                    print("Unable to initialize camera: $e");
+                                  }
+                                } else {
+                                  if (controller!.value.isTakingPicture) {
+                                    return;
+                                  }
+                                  await controller?.takePicture().then(
+                                    (path) async {
+                                      var file = File(path.path);
 
-                                        await file.copy(
-                                            "${documentsDir.path}/$currentTime.$format"); // Documents/0904203.png //copy the image from the temporary location to the permanent one
-                                        print(
-                                            "Image saved to ${documentsDir.path}/$currentTime.$format");
-                                        // preview
-                                        // print out image path
-                                        if (!mounted) return;
-                                      },
-                                    );
-                                  }).request();
-                                } on CameraException catch (e) {
-                                  print("Unable to initialize camera: $e");
+                                      var documentsDir =
+                                          await getApplicationDocumentsDirectory(); // get the documents folder of the current device
+
+                                      var currentTime = DateTime.now()
+                                          .millisecondsSinceEpoch; // get the current date and time
+
+                                      var format = file.path
+                                          .split('.')
+                                          .last; // file.png -> only get png part "png" // get the file format of the captured image
+
+                                      await file.copy(
+                                          "${documentsDir.path}/$currentTime.$format"); // Documents/0904203.png //copy the image from the temporary location to the permanent one
+                                      print(
+                                          "Image saved to ${documentsDir.path}/$currentTime.$format");
+                                      // preview
+                                      // print out image path
+                                      if (!mounted) return;
+                                    },
+                                  );
                                 }
-                              } else {
-                           
-                                    if (controller!.value.isTakingPicture) {
-                                      return;
-                                    }
-                                    await controller?.takePicture().then(
-                                      (path) async {
-                                        var file = File(path.path);
-
-                                        var documentsDir =
-                                            await getApplicationDocumentsDirectory(); // get the documents folder of the current device
-
-                                        var currentTime = DateTime.now()
-                                            .millisecondsSinceEpoch; // get the current date and time
-
-                                        var format = file.path
-                                            .split('.')
-                                            .last; // file.png -> only get png part "png" // get the file format of the captured image
-
-                                        await file.copy(
-                                            "${documentsDir.path}/$currentTime.$format"); // Documents/0904203.png //copy the image from the temporary location to the permanent one
-                                        print(
-                                            "Image saved to ${documentsDir.path}/$currentTime.$format");
-                                        // preview
-                                        // print out image path
-                                        if (!mounted) return;
-                                      },
-                                    );
-                              }
-                              
                               },
                               child: const Stack(
                                 alignment: Alignment.center,
@@ -345,56 +344,48 @@ class _CameraScreenState extends State<CameraScreen> {
                             IconButton(
                               icon: Icon(Icons.flip_camera_android_outlined),
                               onPressed: () async {
-           
                                 var currentDescription =
                                     controller!.description;
                                 // ensure camera is initialized
                                 if (Platform.isAndroid) {
-                                try {
-                                  await Permission.camera
-                                      .onGrantedCallback(() async {
-                                    if (currentDescription.lensDirection ==
-                                        CameraLensDirection.front) {
-    
-                                      await controller?.setDescription(
-                                          cameras.where((element) {
-                                        return element.lensDirection ==
-                                            CameraLensDirection.back;
-                                      }).first);
-                                    } else {
-                                      await controller?.setDescription(
-                                          cameras.where((element) {
-                                        return element.lensDirection ==
-                                            CameraLensDirection.front;
-                                      }).first);
-                                    }
-                                  }).request();
-                                } on CameraException catch (e) {
-                                  print("Unable to initialize camera: $e");
-                                }
-                                }
-
-                                  else {          
-
-                                    if (currentDescription.lensDirection ==
-                                        CameraLensDirection.front) {
-    
-                                      await controller?.setDescription(
-                                          cameras.where((element) {
-                                        return element.lensDirection ==
-                                            CameraLensDirection.back;
-                                      }).first);
-                                    } else {
-                                      await controller?.setDescription(
-                                          cameras.where((element) {
-                                        return element.lensDirection ==
-                                            CameraLensDirection.front;
-                                      }).first);
-                                    
-                                }
+                                  try {
+                                    await Permission.camera
+                                        .onGrantedCallback(() async {
+                                      if (currentDescription.lensDirection ==
+                                          CameraLensDirection.front) {
+                                        await controller?.setDescription(
+                                            cameras.where((element) {
+                                          return element.lensDirection ==
+                                              CameraLensDirection.back;
+                                        }).first);
+                                      } else {
+                                        await controller?.setDescription(
+                                            cameras.where((element) {
+                                          return element.lensDirection ==
+                                              CameraLensDirection.front;
+                                        }).first);
+                                      }
+                                    }).request();
+                                  } on CameraException catch (e) {
+                                    print("Unable to initialize camera: $e");
                                   }
+                                } else {
+                                  if (currentDescription.lensDirection ==
+                                      CameraLensDirection.front) {
+                                    await controller?.setDescription(
+                                        cameras.where((element) {
+                                      return element.lensDirection ==
+                                          CameraLensDirection.back;
+                                    }).first);
+                                  } else {
+                                    await controller?.setDescription(
+                                        cameras.where((element) {
+                                      return element.lensDirection ==
+                                          CameraLensDirection.front;
+                                    }).first);
+                                  }
+                                }
                               },
-                              
                             ),
                           ],
                         ),
