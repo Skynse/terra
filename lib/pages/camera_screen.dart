@@ -8,6 +8,7 @@ import 'package:terra/main.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:terra/pages/gallery.dart';
+import 'package:image/image.dart' as img;
 
 // attribs
 /*
@@ -54,8 +55,6 @@ class _CameraScreenState extends State<CameraScreen> {
   bool _isProcessing = false;
   late ImageClassificationHelper imageClassificationHelper;
   Map<String, double>? classification;
-  DateTime? _lastInferenceTime;
-  final Duration _inferenceInterval = Duration(milliseconds: 500);
 
   @override
   void dispose() {
@@ -77,7 +76,7 @@ class _CameraScreenState extends State<CameraScreen> {
         cameraReady = true;
       });
 
-      controller?.startImageStream(analyseImage);
+      //controller?.startImageStream(analyseImage);
     });
 
     imageClassificationHelper = ImageClassificationHelper();
@@ -86,22 +85,23 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> analyseImage(CameraImage cameraImage) async {
-    final now = DateTime.now();
-    if (_isProcessing ||
-        (_lastInferenceTime != null &&
-            now.difference(_lastInferenceTime!) < _inferenceInterval)) {
+    // if image is still analyzing, skip this frame
+    if (_isProcessing) {
       return;
     }
     _isProcessing = true;
-    _lastInferenceTime = now;
     classification =
         await imageClassificationHelper.inferenceCameraFrame(cameraImage);
+
     _isProcessing = false;
 
     if (classification != null) {
       setState(() {
         classificationOutput = classification!;
       });
+    }
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -387,6 +387,24 @@ class _CameraScreenState extends State<CameraScreen> {
                                 }
                               },
                             ),
+                            IconButton(
+                                onPressed: () async {
+                                  if (controller!.value.isTakingPicture) {
+                                    return;
+                                  }
+                                  var imagePath = await takePicture();
+                                  var image = img.decodeImage(
+                                      File(imagePath!.path).readAsBytesSync());
+
+                                  classification =
+                                      await imageClassificationHelper
+                                          .inferenceImage(image!);
+
+                                  setState(() {
+                                    classificationOutput = classification!;
+                                  });
+                                },
+                                icon: Icon(Icons.refresh))
                           ],
                         ),
                       )),
