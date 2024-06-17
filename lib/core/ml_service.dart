@@ -31,7 +31,7 @@ class ImageClassificationHelper {
 
     // Use Metal Delegate
     if (Platform.isIOS) {
-      options.addDelegate(GpuDelegate());
+      options.addDelegate(XNNPackDelegate());
     }
     // Load model from assets
     interpreter =
