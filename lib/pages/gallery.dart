@@ -10,13 +10,20 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:typed_data';
 
+import 'package:terra/core/ml_service.dart';
+
 class ImagePage extends StatelessWidget {
+  //  Viewing the full image
   ImagePage({super.key, required this.filePath});
   String filePath;
+  Map<String, double> classificationOutput = {};
+  late ImageClassificationHelper imageClassificationHelper;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton:
+          FloatingActionButton(onPressed: () {}, child: const Icon(Icons.info)),
       appBar: AppBar(),
       body: Center(
         child: Image.file(

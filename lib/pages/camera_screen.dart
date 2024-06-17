@@ -76,11 +76,13 @@ class _CameraScreenState extends State<CameraScreen> {
         cameraReady = true;
       });
 
-      //controller?.startImageStream(analyseImage);
+      controller?.startImageStream(analyseImage);
     });
 
     imageClassificationHelper = ImageClassificationHelper();
+
     imageClassificationHelper.initHelper();
+
     super.initState();
   }
 

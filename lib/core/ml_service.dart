@@ -6,11 +6,12 @@ import 'dart:isolate';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart';
+import 'package:tflite_flutter/tflite_flutter_platform_interface.dart';
 
 import 'isolate_inference.dart';
 
 class ImageClassificationHelper {
-  static const modelPath = 'assets/model.tflite';
+  static const modelPath = 'assets/model_quant.tflite';
   static const labelsPath = 'assets/labels.txt';
 
   late final Interpreter interpreter;
@@ -28,17 +29,13 @@ class ImageClassificationHelper {
       options.addDelegate(XNNPackDelegate());
     }
 
-    if (Platform.isAndroid) {
-      options.addDelegate(GpuDelegateV2());
-    }
-
     // Use Metal Delegate
     if (Platform.isIOS) {
       options.addDelegate(GpuDelegate());
     }
-
     // Load model from assets
-    interpreter = await Interpreter.fromAsset(modelPath, options: options);
+    interpreter =
+        await Interpreter.fromAsset(modelPath, options: options..threads = 4);
     inputTensor = interpreter.getInputTensors().first;
     outputTensor = interpreter.getOutputTensors().first;
 
