@@ -8,7 +8,6 @@ import 'package:terra/main.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:terra/pages/gallery.dart';
-import 'package:image/image.dart' as img;
 
 // attribs
 /*
@@ -48,17 +47,14 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> {
   CameraController? controller;
   bool cameraReady = false;
-  // classification
   Map<String, double> classificationOutput = {}; //attribute: score
-  bool infoVisible = false;
-  bool isImageGood = false;
+
   bool _isProcessing = false;
   late ImageClassificationHelper imageClassificationHelper;
   Map<String, double>? classification;
 
   @override
   void dispose() {
-    // TODO: implement dispose
     controller?.dispose();
     super.dispose();
   }
@@ -80,9 +76,7 @@ class _CameraScreenState extends State<CameraScreen> {
     });
 
     imageClassificationHelper = ImageClassificationHelper();
-
     imageClassificationHelper.initHelper();
-
     super.initState();
   }
 
@@ -94,7 +88,6 @@ class _CameraScreenState extends State<CameraScreen> {
     _isProcessing = true;
     classification =
         await imageClassificationHelper.inferenceCameraFrame(cameraImage);
-
     _isProcessing = false;
 
     if (classification != null) {
@@ -107,32 +100,15 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  //A future is an object that holds a potential value.
-
   Future<XFile?> takePicture() async {
     if (controller != null || controller!.value.isInitialized) {
-      // picture logio
-      controller!.setFlashMode(FlashMode.off); // turn off flash
+      XFile? data = await controller!.takePicture();
+      var file = File(data.path);
+      var documentsDir = await getApplicationDocumentsDirectory();
+      var currentTime = DateTime.now().millisecondsSinceEpoch;
+      var format = file.path.split('.').last;
+      await file.copy("${documentsDir.path}/$currentTime.$format");
 
-      XFile? data =
-          await controller!.takePicture(); // take picture using controller
-
-      var file = File(data.path); //get the temporary location of the saved file
-      var documentsDir =
-          await getApplicationDocumentsDirectory(); // get the documents folder of the current device
-
-      var currentTime = DateTime.now()
-          .millisecondsSinceEpoch; // get the current date and time
-
-      var format = file.path
-          .split('.')
-          .last; // file.png -> only get png part "png" // get the file format of the captured image
-
-      await file.copy(
-          "${documentsDir.path}/$currentTime.$format"); // Documents/0904203.png //copy the image from the temporary location to the permanent one
-      // in our documents folder
-
-      // copy to documents
       print("Image saved to ${documentsDir.path}/$currentTime.$format");
       return data;
     }
@@ -145,37 +121,43 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-          // infopanel toggle
-          floatingActionButtonLocation: FloatingActionButtonLocation.startTop,
-          floatingActionButton: FloatingActionButton(
-            onPressed: () {
-              setState(() {
-                infoVisible = !infoVisible;
-              });
-            },
-            child: Icon(infoVisible ? Icons.close : Icons.info),
+          // drawer to show predictions instead of using animated positioned
+          drawer: Drawer(
+            child: ListView(
+              children: [
+                for (var attribute in attributes.keys)
+                  ListTile(
+                    title: Text(attribute),
+                    subtitle: Text(
+                      classificationOutput[attribute] != null
+                          ? classificationOutput[attribute]!.toStringAsFixed(2)
+                          : "0.0",
+                    ),
+                  ),
+              ],
+            ),
           ),
+          // infopanel toggle
+
           body: Padding(
             padding: EdgeInsets.only(
-                top: 20, bottom: 15), // add padding (space) to bottom of screen
+                top: 20), // add padding (space) to bottom of screen
             child: Column(
               children: [
                 Expanded(
-                  child: Stack(
+                  child: Column(
                     children: [
                       Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(18.0),
-                          child: Container(
-                              child: (controller != null &&
-                                      this
-                                          .controller!
-                                          .value
-                                          .isInitialized) // condition to make sure the camera is initialized
-                                  ? CameraPreview(this.controller!)
-                                  : Center(child: CircularProgressIndicator())),
-                        ),
+                        child: Container(
+                            child: (controller != null &&
+                                    this
+                                        .controller!
+                                        .value
+                                        .isInitialized) // condition to make sure the camera is initialized
+                                ? CameraPreview(this.controller!)
+                                : Center(child: CircularProgressIndicator())),
                       ),
+
                       /*
                       Opacity(
                         opacity: 0.7,
@@ -197,7 +179,7 @@ class _CameraScreenState extends State<CameraScreen> {
                         ),
                       ), */
                       // score at top right
-                      AnimatedPositioned(
+                      /**AnimatedPositioned(
                         top: infoVisible
                             ? 10
                             : -300, // Adjust the top position based on visibility
@@ -239,7 +221,7 @@ class _CameraScreenState extends State<CameraScreen> {
                             ],
                           ),
                         ),
-                      ),
+                      ),*/
                     ],
                   ),
                 ),
@@ -389,24 +371,6 @@ class _CameraScreenState extends State<CameraScreen> {
                                 }
                               },
                             ),
-                            IconButton(
-                                onPressed: () async {
-                                  if (controller!.value.isTakingPicture) {
-                                    return;
-                                  }
-                                  var imagePath = await takePicture();
-                                  var image = img.decodeImage(
-                                      File(imagePath!.path).readAsBytesSync());
-
-                                  classification =
-                                      await imageClassificationHelper
-                                          .inferenceImage(image!);
-
-                                  setState(() {
-                                    classificationOutput = classification!;
-                                  });
-                                },
-                                icon: Icon(Icons.refresh))
                           ],
                         ),
                       )),

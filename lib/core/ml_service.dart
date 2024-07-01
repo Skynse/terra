@@ -6,7 +6,6 @@ import 'dart:isolate';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart';
-import 'package:tflite_flutter/tflite_flutter_platform_interface.dart';
 
 import 'isolate_inference.dart';
 
@@ -29,14 +28,22 @@ class ImageClassificationHelper {
       options.addDelegate(XNNPackDelegate());
     }
 
+    // Use GPU Delegate
+    // doesn't work on emulator
+    // if (Platform.isAndroid) {
+    //   options.addDelegate(GpuDelegateV2());
+    // }
+
     // Use Metal Delegate
     if (Platform.isIOS) {
-      options.addDelegate(XNNPackDelegate());
+      options.addDelegate(GpuDelegate());
     }
+
     // Load model from assets
-    interpreter =
-        await Interpreter.fromAsset(modelPath, options: options..threads = 4);
+    interpreter = await Interpreter.fromAsset(modelPath, options: options);
+    // Get tensor input shape [1, 224, 224, 3]
     inputTensor = interpreter.getInputTensors().first;
+    // Get tensor output shape [1, 1001]
     outputTensor = interpreter.getOutputTensors().first;
 
     log('Interpreter loaded successfully');
@@ -60,6 +67,8 @@ class ImageClassificationHelper {
   }
 
   Future<Map<String, double>> _inference(InferenceModel inferenceModel) async {
+    // wait 1 second to prevent the model from running too fast
+    await Future.delayed(Duration(seconds: 1));
     ReceivePort responsePort = ReceivePort();
     isolateInference.sendPort
         .send(inferenceModel..responsePort = responsePort.sendPort);
