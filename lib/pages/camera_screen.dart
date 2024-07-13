@@ -1,43 +1,12 @@
+import 'dart:developer';
+import 'dart:ffi';
 import 'dart:io';
-
-import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:camera/camera.dart';
-import 'package:flutter/services.dart';
-import 'package:terra/core/ml_service.dart';
-import 'package:terra/main.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:terra/pages/gallery.dart';
-
-// attribs
-/*
-0 balancing_elements
-1 color_harmony
-2 content
-3 depth_of_field
-4 light
-5 motion_blur
-6 object
-7 repetition
-8 rule_of_thirds
-9 symmetry
-10 vivid_color
-11 score
-*/
-const attributes = {
-  'balancing_elements': 0,
-  'color_harmony': 1,
-  'content': 2,
-  'depth_of_field': 3,
-  'light': 4,
-  'motion_blur': 5,
-  'object': 6,
-  'repetition': 7,
-  'rule_of_thirds': 8,
-  'symmetry': 9,
-  'vivid_color': 10,
-  'score': 11
-};
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 
 class CameraScreen extends StatefulWidget {
   @override
@@ -45,276 +14,90 @@ class CameraScreen extends StatefulWidget {
 }
 
 class _CameraScreenState extends State<CameraScreen> {
-  CameraController? controller;
-  bool cameraReady = false;
-  Map<String, double> classificationOutput = {}; //attribute: score
-
+  final ImagePicker _picker = ImagePicker();
+  XFile? _imageBytes;
   bool _isProcessing = false;
-  late ImageClassificationHelper imageClassificationHelper;
-  Map<String, double>? classification;
+  List<Map<String, dynamic>> classificationOutput = []; // Store prediction data
 
-  @override
-  void dispose() {
-    controller?.dispose();
-    super.dispose();
+  Future<void> _pickImage(ImageSource source) async {
+    final XFile? imageFile = await _picker.pickImage(source: source);
+    if (imageFile != null) {
+      setState(() {
+        _isProcessing = true;
+        _imageBytes = imageFile;
+      });
+      File image = File(imageFile.path);
+      List<Map<String, dynamic>>? classification =
+          await _sendImageToServer(image);
+      setState(() {
+        _isProcessing = false;
+        classificationOutput = classification ?? [];
+      });
+    }
   }
 
-  @override
-  void initState() {
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
-    controller = CameraController(cameras[0], ResolutionPreset.high);
+  Future<List<Map<String, dynamic>>?> _sendImageToServer(File image) async {
+    final uri = Uri.parse("https://skynse.pythonanywhere.com/predict");
+    final request = http.MultipartRequest('POST', uri)
+      ..files.add(await http.MultipartFile.fromPath('image', image.path));
 
-    controller?.initialize().then((_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        cameraReady = true;
-      });
-
-      controller?.startImageStream(analyseImage);
+    request.headers.addAll({
+      'Content-Type': 'multipart/form-data',
     });
 
-    imageClassificationHelper = ImageClassificationHelper();
-    imageClassificationHelper.initHelper();
-    super.initState();
-  }
-
-  Future<void> analyseImage(CameraImage cameraImage) async {
-    // if image is still analyzing, skip this frame
-    if (_isProcessing) {
-      return;
+    final response = await request.send();
+    if (response.statusCode == 200) {
+      final responseBody = await response.stream.bytesToString();
+      final Map<String, dynamic> jsonResponse = json.decode(responseBody);
+      if (jsonResponse['success']) {
+        return List<Map<String, dynamic>>.from(jsonResponse['predictions']);
+      }
+    } else {
+      // Handle error
+      log('Server error: ${response.statusCode}');
+      return null;
     }
-    _isProcessing = true;
-    classification =
-        await imageClassificationHelper.inferenceCameraFrame(cameraImage);
-    _isProcessing = false;
-
-    if (classification != null) {
-      setState(() {
-        classificationOutput = classification!;
-      });
-    }
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  Future<XFile?> takePicture() async {
-    if (controller != null || controller!.value.isInitialized) {
-      XFile? data = await controller!.takePicture();
-      var file = File(data.path);
-      var documentsDir = await getApplicationDocumentsDirectory();
-      var currentTime = DateTime.now().millisecondsSinceEpoch;
-      var format = file.path.split('.').last;
-      await file.copy("${documentsDir.path}/$currentTime.$format");
-
-      print("Image saved to ${documentsDir.path}/$currentTime.$format");
-      return data;
-    }
-
-    print("Camera is not initialized");
-    return null;
   }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-          // drawer to show predictions instead of using animated positioned
-          drawer: Drawer(
-            child: ListView(
-              children: [
-                for (var attribute in attributes.keys)
-                  ListTile(
-                    title: Text(attribute),
-                    subtitle: Text(
-                      classificationOutput[attribute] != null
-                          ? classificationOutput[attribute]!.toStringAsFixed(2)
-                          : "0.0",
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // infopanel toggle
-
-          body: Padding(
-            padding: EdgeInsets.only(
-                top: 20), // add padding (space) to bottom of screen
-            child: Column(
-              children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      Center(
-                        child: Container(
-                            child: (controller != null &&
-                                    this
-                                        .controller!
-                                        .value
-                                        .isInitialized) // condition to make sure the camera is initialized
-                                ? CameraPreview(this.controller!)
-                                : Center(child: CircularProgressIndicator())),
-                      ),
-
-                      /*
-                      Opacity(
-                        opacity: 0.7,
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 18.0, top: 18, left: 43, right: 43),
-                            child: Container(
-                              height: MediaQuery.of(context).size.height,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  width: 5,
-                                  color:
-                                      (isImageGood) ? Colors.green : Colors.red,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ), */
-                      // score at top right
-                      /**AnimatedPositioned(
-                        top: infoVisible
-                            ? 10
-                            : -300, // Adjust the top position based on visibility
-                        right: 30,
-                        duration: Duration(
-                            milliseconds: 300), // Set the animation duration
-                        curve: Curves.easeInOut, // Set the animation curve
-                        child: Container(
-                          padding: EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.7),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Column(
-                            children: [
-                              for (var attribute in attributes.keys)
-                                Row(
-                                  children: [
-                                    Text(
-                                      attribute,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    SizedBox(width: 10),
-                                    Text(
-                                      classificationOutput[attribute] != null
-                                          ? classificationOutput[attribute]!
-                                              .toStringAsFixed(2)
-                                          : "0.0",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),*/
-                    ],
-                  ),
+        body: Padding(
+          padding: EdgeInsets.only(top: 20),
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: _isProcessing
+                      ? CircularProgressIndicator()
+                      : classificationOutput.isNotEmpty
+                          ? Image.file(File(_imageBytes!.path))
+                          : Text("Select an image to analyze"),
                 ),
-                SizedBox(
-                  height: 100,
-                  child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.7),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
+              ),
+              SizedBox(
+                height: 200,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             IconButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              const Gallery()));
-                                },
-                                icon: Icon(Icons.photo)),
+                              onPressed: () => _pickImage(ImageSource.gallery),
+                              icon: Icon(Icons.photo),
+                            ),
                             InkWell(
-                              // The button itself
                               borderRadius: BorderRadius.circular(80),
-                              onTap: () async {
-                                // ensure camera is initialized
-
-                                if (Platform.isAndroid) {
-                                  try {
-                                    await Permission.camera
-                                        .onGrantedCallback(() async {
-                                      if (controller!.value.isTakingPicture) {
-                                        return;
-                                      }
-                                      await controller?.takePicture().then(
-                                        (path) async {
-                                          var file = File(path.path);
-
-                                          var documentsDir =
-                                              await getApplicationDocumentsDirectory(); // get the documents folder of the current device
-
-                                          var currentTime = DateTime.now()
-                                              .millisecondsSinceEpoch; // get the current date and time
-
-                                          var format = file.path
-                                              .split('.')
-                                              .last; // file.png -> only get png part "png" // get the file format of the captured image
-
-                                          await file.copy(
-                                              "${documentsDir.path}/$currentTime.$format"); // Documents/0904203.png //copy the image from the temporary location to the permanent one
-                                          print(
-                                              "Image saved to ${documentsDir.path}/$currentTime.$format");
-                                          // preview
-                                          // print out image path
-                                          if (!mounted) return;
-                                        },
-                                      );
-                                    }).request();
-                                  } on CameraException catch (e) {
-                                    print("Unable to initialize camera: $e");
-                                  }
-                                } else {
-                                  if (controller!.value.isTakingPicture) {
-                                    return;
-                                  }
-                                  await controller?.takePicture().then(
-                                    (path) async {
-                                      var file = File(path.path);
-
-                                      var documentsDir =
-                                          await getApplicationDocumentsDirectory(); // get the documents folder of the current device
-
-                                      var currentTime = DateTime.now()
-                                          .millisecondsSinceEpoch; // get the current date and time
-
-                                      var format = file.path
-                                          .split('.')
-                                          .last; // file.png -> only get png part "png" // get the file format of the captured image
-
-                                      await file.copy(
-                                          "${documentsDir.path}/$currentTime.$format"); // Documents/0904203.png //copy the image from the temporary location to the permanent one
-                                      print(
-                                          "Image saved to ${documentsDir.path}/$currentTime.$format");
-                                      // preview
-                                      // print out image path
-                                      if (!mounted) return;
-                                    },
-                                  );
-                                }
-                              },
+                              onTap: () => _pickImage(ImageSource.camera),
                               child: const Stack(
                                 alignment: Alignment.center,
                                 children: [
@@ -325,66 +108,35 @@ class _CameraScreenState extends State<CameraScreen> {
                                 ],
                               ),
                             ),
-                            IconButton(
-                              icon: Icon(Icons.flip_camera_android_outlined),
-                              onPressed: () async {
-                                var currentDescription =
-                                    controller!.description;
-                                // ensure camera is initialized
-                                if (Platform.isAndroid) {
-                                  try {
-                                    await Permission.camera
-                                        .onGrantedCallback(() async {
-                                      if (currentDescription.lensDirection ==
-                                          CameraLensDirection.front) {
-                                        await controller?.setDescription(
-                                            cameras.where((element) {
-                                          return element.lensDirection ==
-                                              CameraLensDirection.back;
-                                        }).first);
-                                      } else {
-                                        await controller?.setDescription(
-                                            cameras.where((element) {
-                                          return element.lensDirection ==
-                                              CameraLensDirection.front;
-                                        }).first);
-                                      }
-                                    }).request();
-                                  } on CameraException catch (e) {
-                                    print("Unable to initialize camera: $e");
-                                  }
-                                } else {
-                                  if (currentDescription.lensDirection ==
-                                      CameraLensDirection.front) {
-                                    await controller?.setDescription(
-                                        cameras.where((element) {
-                                      return element.lensDirection ==
-                                          CameraLensDirection.back;
-                                    }).first);
-                                  } else {
-                                    await controller?.setDescription(
-                                        cameras.where((element) {
-                                      return element.lensDirection ==
-                                          CameraLensDirection.front;
-                                    }).first);
-                                  }
-                                }
-                              },
-                            ),
                           ],
                         ),
-                      )),
+                        Expanded(
+                          child: classificationOutput.isNotEmpty
+                              ? ListView.builder(
+                                  itemCount: classificationOutput.length,
+                                  itemBuilder: (context, index) {
+                                    Map<String, dynamic> prediction =
+                                        classificationOutput[index];
+                                    return ListTile(
+                                      title: Text(prediction['label']),
+                                      subtitle: Text(prediction['probability']
+                                          .toStringAsFixed(2)),
+                                    );
+                                  },
+                                )
+                              : Center(
+                                  child: Text("No predictions to show"),
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ],
-            ),
-          )),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
-}
-
-Widget circle(int radius, Color color) {
-  return Container(
-    width: radius.toDouble(),
-    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-  );
 }
