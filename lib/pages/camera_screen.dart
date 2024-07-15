@@ -28,7 +28,7 @@ class _CameraScreenState extends State<CameraScreen> {
         final image = File(imageFile.path);
 
         // save to gallery
-        final appDir = await getExternalStorageDirectory();
+        final appDir = await getApplicationDocumentsDirectory();
         final fileName = imageFile.path.split('/').last;
         final savedImage = await image.copy('${appDir!.path}/$fileName');
         log('Image saved to gallery: ${savedImage.path}');
