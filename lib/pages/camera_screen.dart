@@ -104,11 +104,7 @@ class _CameraScreenState extends State<CameraScreen> {
                           children: [
                             IconButton(
                               onPressed: () async {
-                                if (await Permission.photos
-                                    .request()
-                                    .isGranted) {
-                                  await _pickImage(ImageSource.gallery);
-                                }
+                                await _pickImage(ImageSource.gallery);
                               },
                               icon: Icon(Icons.photo),
                             ),
@@ -116,11 +112,8 @@ class _CameraScreenState extends State<CameraScreen> {
                               borderRadius: BorderRadius.circular(80),
                               onTap: () async {
                                 // Request camera permission
-                                if (await Permission.camera
-                                    .request()
-                                    .isGranted) {
-                                  await _pickImage(ImageSource.camera);
-                                }
+
+                                await _pickImage(ImageSource.camera);
                               },
                               child: const Stack(
                                 alignment: Alignment.center,
