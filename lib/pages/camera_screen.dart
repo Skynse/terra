@@ -88,7 +88,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 ),
               ),
               SizedBox(
-                height: 200,
+                height: 400, // Increased height for the bottom section
                 child: Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(
