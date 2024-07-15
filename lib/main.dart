@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:terra/pages/camera_screen.dart';
 import 'package:camera/camera.dart';
 import 'package:terra/pages/gallery.dart';
@@ -19,6 +20,7 @@ class App extends StatelessWidget {
     return MaterialApp(
         theme: ThemeData.dark(),
         debugShowCheckedModeBanner: false,
+        // widget to show state changes
         home: Scaffold(
           body: CameraScreen(),
         ));
