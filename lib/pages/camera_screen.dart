@@ -7,6 +7,8 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class CameraScreen extends StatefulWidget {
   @override
@@ -22,6 +24,15 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<void> _pickImage(ImageSource source) async {
     final XFile? imageFile = await _picker.pickImage(source: source);
     if (imageFile != null) {
+      if (source == ImageSource.camera) {
+        final image = File(imageFile.path);
+
+        // save to gallery
+        final appDir = await getExternalStorageDirectory();
+        final fileName = imageFile.path.split('/').last;
+        final savedImage = await image.copy('${appDir!.path}/$fileName');
+        log('Image saved to gallery: ${savedImage.path}');
+      }
       setState(() {
         _isProcessing = true;
         _imageBytes = imageFile;
@@ -92,12 +103,25 @@ class _CameraScreenState extends State<CameraScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             IconButton(
-                              onPressed: () => _pickImage(ImageSource.gallery),
+                              onPressed: () async {
+                                if (await Permission.photos
+                                    .request()
+                                    .isGranted) {
+                                  await _pickImage(ImageSource.gallery);
+                                }
+                              },
                               icon: Icon(Icons.photo),
                             ),
                             InkWell(
                               borderRadius: BorderRadius.circular(80),
-                              onTap: () => _pickImage(ImageSource.camera),
+                              onTap: () async {
+                                // Request camera permission
+                                if (await Permission.camera
+                                    .request()
+                                    .isGranted) {
+                                  await _pickImage(ImageSource.camera);
+                                }
+                              },
                               child: const Stack(
                                 alignment: Alignment.center,
                                 children: [
