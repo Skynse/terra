@@ -10,7 +10,7 @@ import 'package:image/image.dart';
 import 'isolate_inference.dart';
 
 class ImageClassificationHelper {
-  static const modelPath = 'assets/model.tflite';
+  static const modelPath = 'assets/resnet18.tflite';
   static const labelsPath = 'assets/labels.txt';
 
   late final Interpreter interpreter;
@@ -28,9 +28,11 @@ class ImageClassificationHelper {
       options.addDelegate(XNNPackDelegate());
     }
 
-    if (Platform.isAndroid) {
-      options.addDelegate(GpuDelegateV2());
-    }
+    // Use GPU Delegate
+    // doesn't work on emulator
+    // if (Platform.isAndroid) {
+    //   options.addDelegate(GpuDelegateV2());
+    // }
 
     // Use Metal Delegate
     if (Platform.isIOS) {
@@ -39,7 +41,9 @@ class ImageClassificationHelper {
 
     // Load model from assets
     interpreter = await Interpreter.fromAsset(modelPath, options: options);
+    // Get tensor input shape [1, 224, 224, 3]
     inputTensor = interpreter.getInputTensors().first;
+    // Get tensor output shape [1, 1001]
     outputTensor = interpreter.getOutputTensors().first;
 
     log('Interpreter loaded successfully');
@@ -63,6 +67,8 @@ class ImageClassificationHelper {
   }
 
   Future<Map<String, double>> _inference(InferenceModel inferenceModel) async {
+    // wait 1 second to prevent the model from running too fast
+    await Future.delayed(Duration(seconds: 1));
     ReceivePort responsePort = ReceivePort();
     isolateInference.sendPort
         .send(inferenceModel..responsePort = responsePort.sendPort);

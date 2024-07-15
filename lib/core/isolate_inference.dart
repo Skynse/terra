@@ -81,6 +81,7 @@ class IsolateInference {
       // // Run inference
       Interpreter interpreter =
           Interpreter.fromAddress(isolateModel.interpreterAddress);
+      await Future.delayed(const Duration(seconds: 1));
       interpreter.run(input, output);
       // Get first output tensor
       final result = output.first;

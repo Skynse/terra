@@ -6,21 +6,102 @@ import 'package:camera/camera.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:typed_data';
 
-class ImagePage extends StatelessWidget {
+import 'package:terra/core/ml_service.dart';
+
+class ImagePage extends StatefulWidget {
+  //  Viewing the full image
   ImagePage({super.key, required this.filePath});
   String filePath;
 
   @override
+  State<ImagePage> createState() => _ImagePageState();
+}
+
+class _ImagePageState extends State<ImagePage> {
+  Map<String, double> classificationOutput = {};
+
+  late ImageClassificationHelper imageClassificationHelper;
+
+  @override
+  void initState() {
+    imageClassificationHelper = ImageClassificationHelper();
+    imageClassificationHelper.initHelper();
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+        child: ListView(
+          children: [
+            DrawerHeader(
+              child: Text("Image Classification"),
+            ),
+            ListTile(
+              title: Text("Classify Image"),
+              onTap: () async {
+                final image =
+                    img.decodeImage(File(widget.filePath).readAsBytesSync());
+                final resizedImage =
+                    img.copyResize(image!, width: 224, height: 224);
+                final inputImage = img.encodePng(resizedImage);
+                img.Image im = img.Image.fromBytes(
+                    width: resizedImage.width,
+                    height: resizedImage.height,
+                    bytes: inputImage.buffer);
+                final output = await imageClassificationHelper
+                    .inferenceImage(im as img.Image);
+                classificationOutput = output;
+
+                // show popup, ensuring scrollable
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: Text("Classification Result"),
+                      content: SingleChildScrollView(
+                        child: Column(
+                          children: classificationOutput.keys
+                              .map((key) => ListTile(
+                                    title: Text(key),
+                                    subtitle: Text(
+                                        classificationOutput[key]!.toString()),
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          child: Text("Close"),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+            ListTile(
+              title: Text("Close"),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
       appBar: AppBar(),
       body: Center(
         child: Image.file(
-          File(filePath),
+          File(widget.filePath),
         ),
       ),
     );
@@ -79,6 +160,7 @@ class ImageCard extends ConsumerWidget {
           children: [
             Expanded(
               child: Image.file(
+                filterQuality: FilterQuality.low,
                 width: 200,
                 scale: 1.0,
                 File(imagePath),
@@ -132,6 +214,19 @@ class _GalleryState extends ConsumerState<Gallery> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.clear),
+            onPressed: () async {
+              final directory = await getApplicationDocumentsDirectory();
+              final dir = Directory(directory.path);
+              dir.deleteSync(recursive: true);
+
+              setState(() {});
+              // deleta all images
+            },
+          )
+        ],
         iconTheme: IconThemeData(color: Colors.white),
         // ignore: prefer_const_constructors
         title: Text(
