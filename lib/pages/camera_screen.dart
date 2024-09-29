@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:terra/pages/gallery.dart';
 
 class CameraScreen extends StatefulWidget {
   @override
@@ -74,6 +75,16 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
+        appBar: AppBar(
+          actions: [
+            IconButton(
+                onPressed: () {
+                  Navigator.of(context)
+                      .push(MaterialPageRoute(builder: (context) => Gallery()));
+                },
+                icon: Icon(Icons.photo))
+          ],
+        ),
         body: Padding(
           padding: EdgeInsets.only(top: 20),
           child: Column(
